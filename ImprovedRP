@@ -1,0 +1,60 @@
+#traindata: Training data, with the first column being the dependent variable and named Y
+#trasferdata: Trasferred data, with the first column being the dependent variable and named Y
+#testdata: Test data
+#propotion: Proportion of samples transfered from transfered data
+#row_rate: Proportion of sampling from samples in RP
+#col_rate: Proportion of sampling from features in RP
+#cycletime: Sampling Times of RP Model
+
+improvedRP=function(traindata,trasferdata,testdata,propotion,row_rate,col_rate,cycletime){
+    
+  nts<-round(propotion*nrow(trasferdata),0)
+    
+  trasferdata1<-trasferdata[sample(1:nrow(trasferdata),nts),]
+
+  traindata1<-rbind(traindata,trasferdata1)
+  
+  sample_rate_row<-row_rate
+  
+  sample_rate_col<-col_rate
+  
+  pre_matrix<-matrix(ncol=cycletime,nrow=nrow(testdata))
+  
+  for (i in 1:cycletime) {
+    
+    sample_index_col<-sample(2:ncol(traindata1),floor(sample_rate_col*ncol(traindata1)))
+    
+    sample_index_col<-append(1,sample_index_col)
+    
+    sample_index_row<-sample(1:nrow(traindata),floor(sample_rate_row*nrow(traindata)))
+    
+    sample_index_row<-append(sample_index_row,(nrow(traindata)+1):(nrow(traindata1)))
+    
+    sample_data<-traindata1[sample_index_row,sample_index_col]
+    
+    model<-lm(Y~.,data=sample_data)
+    
+    sample_data_te<-testdata[,sample_index_col]
+    
+    pre_matrix[,i]=predict(model,newdata=sample_data_te)
+    
+    print(i)
+    
+  }
+  
+  output<-c()
+  
+  pre_matrix[pre_matrix < 0] <- 0
+  
+  sum<-rowMeans(pre_matrix)*cycletime
+  
+  for (k in 1:nrow(pre_matrix)) {
+    
+    output[k]=sum[k]/sum(pre_matrix[k,] > 0)
+    
+  }
+  
+  return(output)
+}
+
+
